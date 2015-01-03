@@ -41,3 +41,13 @@ Icon
 Network Trash Folder
 Temporary Items
 .apdisk
+
+# Custom
+*.mat
+*.xlsx
+*.txt
+*.rpy*
+*.png
+*.log
+*.dmp
+*.pyc
