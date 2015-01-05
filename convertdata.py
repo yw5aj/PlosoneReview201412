@@ -124,13 +124,13 @@ if __name__ == '__main__':
         time_trace_list.append(np.arange(displ_trace.size)/test.fs)
     # Set material properties
     thickness = 225.33
-    mu, alpha, tau1, tau2, g1, g2 = 6.354e3, 8.787, 0.092, 1.111, 0.482, 0.110
+    mu, alpha, tau1, tau2, g1, g2 = 1446.317*8.088/2, 8.800, 0.159, 2.197, 0.511, 0.089
     material = [thickness, mu, alpha, tau1, tau2, g1, g2]
     csv_folder = 'X:/WorkFolder/AbaqusFolder/Viscoelasticity/csvFiles/'
     np.savetxt(csv_folder + 'valid_material.csv', material, delimiter=',')
     if run_calibration:
         # Set up calibration stim
-        depth = np.linspace(0.10, 0.12, 5) * 1e-3
+        depth = np.linspace(0.08, 0.12, 5) * 1e-3
         ramp_time = np.ones_like(depth) * 0.1
         output = np.c_[ramp_time, depth]
         np.savetxt(csv_folder + 'valid_stim.csv', output, delimiter=',')
@@ -141,11 +141,11 @@ if __name__ == '__main__':
     model_force_list, model_displ_list = [], []
     for fname in os.listdir(csv_folder):
         if fname.startswith('calibration') and int(fname[11])<5:
-            _, force, displ = np.loadtxt(csv_folder+fname, delimiter=','
+            time, force, displ = np.loadtxt(csv_folder+fname, delimiter=','
                 ).T
-            model_force_list.append(force[-1]*1e3)
-            model_displ_list.append(displ[-1]*1e3)
-    exp_force_list = [force_trace[-1] for force_trace in force_trace_list]
+            model_force_list.append(np.interp(2.5, time, force)*1e3)
+            model_displ_list.append(np.interp(2.5, time, displ)*1e3)
+    exp_force_list = [force_trace[2500] for force_trace in force_trace_list]
     exp_displ_list = [displ_trace[2500] for displ_trace in displ_trace_list]
     def get_r2(a, abq_force, abq_displ, static_force, exp_displ, sign=1.):
         abq_force = np.array(abq_force)
@@ -216,18 +216,18 @@ if __name__ == '__main__':
     fig.savefig('3.png')
     # %% Plot the static force displ curves
     fig, axs = plt.subplots()
-    static_displ_list = [displ[-1] for displ in displ_trace_list]
-    static_force_list = [force[-1] for force in force_trace_list]
+    static_displ_list = [displ[2500] for displ in displ_trace_list]
+    static_force_list = [force[2500] for force in force_trace_list]
     for i in range(len(static_displ_list)):
         axs.plot(static_displ_list[i], static_force_list[i], 
                  marker=r'$%d$'%i, ms=15)
     model_force_list, model_displ_list = [], []
     for fname in os.listdir(csv_folder):
         if fname.startswith('calibration') and int(fname[11])<5:
-            _, force, displ = np.loadtxt(csv_folder+fname, delimiter=','
+            time, force, displ = np.loadtxt(csv_folder+fname, delimiter=','
                 ).T
-            model_force_list.append(force[-1]*1e3)
-            model_displ_list.append(displ[-1]*1e3)
+            model_force_list.append(np.interp(2.5, time, force)*1e3)
+            model_displ_list.append(np.interp(2.5, time, displ)*1e3)
     axs.plot(model_displ_list, model_force_list, '--r')
     axs.plot(displ_coeff[0]+np.array(model_displ_list)*displ_coeff[1], 
              model_force_list, '-r')
