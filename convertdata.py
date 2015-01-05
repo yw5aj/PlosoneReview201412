@@ -110,7 +110,8 @@ class Test:
 
 if __name__ == '__main__':
     # Switches
-    run_calibration = True
+    run_calibration = False
+    run_model = False
     # Instantiation
     test = Test(test_id=2)
 #    use_trace = range(len(test.force_trace_list))
@@ -124,7 +125,7 @@ if __name__ == '__main__':
         time_trace_list.append(np.arange(displ_trace.size)/test.fs)
     # Set material properties
     thickness = 225.33
-    mu, alpha, tau1, tau2, g1, g2 = 1446.317*8.088/2, 8.800, 0.159, 2.197, 0.511, 0.089
+    mu, alpha, tau1, tau2, g1, g2 = 6.354e3, 8.787, 0.092, 1.111, 0.482, 0.110
     material = [thickness, mu, alpha, tau1, tau2, g1, g2]
     csv_folder = 'X:/WorkFolder/AbaqusFolder/Viscoelasticity/csvFiles/'
     np.savetxt(csv_folder + 'valid_material.csv', material, delimiter=',')
@@ -191,8 +192,10 @@ if __name__ == '__main__':
     output = np.c_[abq_time, (abq_displ-displ_coeff[0])/displ_coeff[1]/1e3]
     np.savetxt(csv_folder + 'valid_stim1.csv', output, delimiter=',')        
     # Run abaqus
-    os.system('call \"C:/SIMULIA/Abaqus/Commands/abaqus.bat\" cae '+\
-        'script=X:/WorkFolder/AbaqusFolder/Viscoelasticity/runValidation.py')
+    if run_model:
+        os.system('call \"C:/SIMULIA/Abaqus/Commands/abaqus.bat\" cae '+\
+            'script=X:/WorkFolder/AbaqusFolder/Viscoelasticity/'+\
+            'runValidation.py')
     # Read output data from abaqus
     model_time_list, model_force_list, model_displ_list = [], [], []
     for fname in os.listdir(csv_folder):
@@ -202,16 +205,40 @@ if __name__ == '__main__':
             model_time_list.append(time)
             model_force_list.append(force*1e3)
             model_displ_list.append(displ*1e3)
+    def get_r2(model_time, model_force, exp_time, exp_force):
+        exp_time = exp_time[exp_force.argmax():]
+        exp_force = exp_force[exp_force.argmax():]        
+        fine_model_force = np.interp(exp_time, model_time, model_force)
+        sstot = exp_force.var() * exp_force.shape[0]
+        ssres = ((exp_force - fine_model_force)**2).sum()
+        r2 = 1. - ssres / sstot
+        return r2
+    r2_list = []
+    r2_list.append(
+        get_r2(model_time_list[0], model_force_list[0], time_trace_list[0],
+        (force_trace_list[0]+force_trace_list[2])/2))
+    r2_list.append(
+        get_r2(model_time_list[1], model_force_list[1], time_trace_list[1],
+        (force_trace_list[1]+force_trace_list[3])/2))
+    print(r2_list)            
     # %% Plot result
-    fig, axs = plt.subplots()
+    fig, axs = plt.subplots(figsize=(3.27, 2))
     for force_trace in force_trace_list:
-        plt.plot(np.arange(force_trace.shape[0])/test.fs, force_trace, '-', c='.5')
+        axs.plot(np.arange(force_trace.shape[0])/test.fs, force_trace, '-', 
+                 c='.5', label='Experiment')
     for i, model_force in enumerate(model_force_list):
         model_time = model_time_list[i]
-        plt.plot(model_time, model_force, '-r')
+        axs.plot(model_time, model_force, '-r', label='Model')
+    handles, labels = axs.get_legend_handles_labels()
+    axs.legend(handles[3:5], labels[3:5], loc=4)
     axs.set_xlabel('Time (s)')
     axs.set_ylabel('Force (mN)')
     axs.set_xlim(0, 5)
+    for i in range(2):
+        time, force = model_time_list[i], model_force_list[i]
+        axs.text(2.5, np.interp(2.5, time, force) - (-1)**i * 10, 
+             r'${R^2}$ = %.3f' % r2_list[i],
+             ha='center', va='center', size=8)
     fig.tight_layout()
     fig.savefig('3.png')
     # %% Plot the static force displ curves
