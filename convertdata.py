@@ -111,15 +111,17 @@ class Test:
 if __name__ == '__main__':
     # Switches
     run_calibration = True
-    no_creep = True
     # Instantiation
     test = Test(test_id=2)
 #    use_trace = range(len(test.force_trace_list))
-    use_trace = [3, 4, 5]
+    use_trace = [1, 2, 4, 5]
     force_trace_list, displ_trace_list = [], []
     for i in use_trace:
         force_trace_list.append(test.force_trace_list[i])
         displ_trace_list.append(test.displ_trace_list[i])
+    time_trace_list = []
+    for displ_trace in displ_trace_list:
+        time_trace_list.append(np.arange(displ_trace.size)/test.fs)
     # Set material properties
     thickness = 225.33
     mu, alpha, tau1, tau2, g1, g2 = 6.354e3, 8.787, 0.092, 1.111, 0.482, 0.110
@@ -144,7 +146,7 @@ if __name__ == '__main__':
             model_force_list.append(force[-1]*1e3)
             model_displ_list.append(displ[-1]*1e3)
     exp_force_list = [force_trace[-1] for force_trace in force_trace_list]
-    exp_displ_list = [displ_trace[-1] for displ_trace in displ_trace_list]
+    exp_displ_list = [displ_trace[2500] for displ_trace in displ_trace_list]
     def get_r2(a, abq_force, abq_displ, static_force, exp_displ, sign=1.):
         abq_force = np.array(abq_force)
         abq_displ = np.array(abq_displ)
@@ -162,37 +164,39 @@ if __name__ == '__main__':
                    -1.), method='L-BFGS-B')
     displ_coeff = res.x
     # Generate parameters for Abaqus runs
-    for i, displ in enumerate(displ_trace_list):
-        time = np.arange(displ.shape[0]) / test.fs
-        force = force_trace_list[i]
-        peaktime = time[force.argmax()]
-        knots = [peaktime/4, peaktime/2, .75*peaktime, peaktime*1, 
-                 peaktime*2, 0.5*(peaktime+time[-1])]
-        spline = LSQUnivariateSpline(time, displ, knots)
-        abq_time = np.logspace(0, np.log10(6), 100) - 1
-        abq_displ = spline(abq_time)
-        abq_displ[0] = 0.
-        abq_displ_max = (abq_displ.max()-displ_coeff[0]
-            )/displ_coeff[1]*1e-3
-        abq_displ = abq_displ / abq_displ.max() * abq_displ_max
-        if no_creep == True:
-            peak_abq_time_index = (abq_time > peaktime).nonzero()[0][0]
-            acc = 1. / peaktime
-            temp = .5 * acc * (peaktime**2 - (
-                peaktime - abq_time[:peak_abq_time_index])**2)
-            plt.plot(time, (displ - displ_coeff[0]) / displ_coeff[1] * 1e-3)
-            abq_time = np.r_[abq_time[:peak_abq_time_index], 5.]
-            abq_displ = np.r_[abq_displ[:peak_abq_time_index], 
-                              abq_displ[peak_abq_time_index]]
-        output = np.c_[abq_time, abq_displ]
-        np.savetxt(csv_folder + 'valid_stim%d.csv'%i, output, delimiter=',')
+    fig, axs = plt.subplots()
+#    for i, displ in enumerate(displ_trace_list):
+#        time = time_trace_list[i]
+#        force = force_trace_list[i]
+#        peaktime = time[force.argmax()]
+#        abq_time = np.array([0, peaktime, 5])
+#        abq_displ = np.array([0., displ[2500], displ[2500]])
+#        axs.plot(abq_time, abq_displ, '-r')
+#        axs.plot(time, displ, '.k')
+#        output = np.c_[abq_time, (abq_displ-displ_coeff[0])/displ_coeff[1]/1e3]
+#        np.savetxt(csv_folder + 'valid_stim%d.csv'%i, output, delimiter=',')
+    # Manually write input
+    peaktime = np.mean([time_trace_list[i][force_trace_list[i].argmax()]
+        for i in (0, 2)])
+    meandispl = np.mean([displ_trace_list[i][2500] for i in (0, 2)])
+    abq_time = np.array((0., peaktime, 5.))
+    abq_displ = np.array((0., meandispl, meandispl))
+    output = np.c_[abq_time, (abq_displ-displ_coeff[0])/displ_coeff[1]/1e3]
+    np.savetxt(csv_folder + 'valid_stim0.csv', output, delimiter=',')    
+    peaktime = np.mean([time_trace_list[i][force_trace_list[i].argmax()]
+        for i in (1, 3)])
+    meandispl = np.mean([displ_trace_list[i][2500] for i in (1, 3)])
+    abq_time = np.array((0., peaktime, 5.))
+    abq_displ = np.array((0., meandispl, meandispl))
+    output = np.c_[abq_time, (abq_displ-displ_coeff[0])/displ_coeff[1]/1e3]
+    np.savetxt(csv_folder + 'valid_stim1.csv', output, delimiter=',')        
     # Run abaqus
     os.system('call \"C:/SIMULIA/Abaqus/Commands/abaqus.bat\" cae '+\
         'script=X:/WorkFolder/AbaqusFolder/Viscoelasticity/runValidation.py')
     # Read output data from abaqus
     model_time_list, model_force_list, model_displ_list = [], [], []
     for fname in os.listdir(csv_folder):
-        if fname.startswith('validation') and int(fname[10])<len(use_trace):
+        if fname.startswith('validation') and int(fname[10])<2:
             time, force, displ = np.loadtxt(csv_folder+fname, delimiter=','
                 ).T
             model_time_list.append(time)
@@ -207,6 +211,7 @@ if __name__ == '__main__':
         plt.plot(model_time, model_force, '-r')
     axs.set_xlabel('Time (s)')
     axs.set_ylabel('Force (mN)')
+    axs.set_xlim(0, 5)
     fig.tight_layout()
     fig.savefig('3.png')
     # %% Plot the static force displ curves
