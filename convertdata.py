@@ -222,25 +222,34 @@ if __name__ == '__main__':
         (force_trace_list[1]+force_trace_list[3])/2))
     print(r2_list)            
     # %% Plot result
-    fig, axs = plt.subplots(figsize=(3.27, 4))
+    fig, axs = plt.subplots(2, 1, figsize=(3.27, 5))
+    # Get schematic
+    im = plt.imread('validation_schematic.png')
+    axs[0].imshow(im)
+    axs[0].axis('off')    
+    # Plot data trace
     for force_trace in force_trace_list:
-        axs.plot(np.arange(force_trace.shape[0])/test.fs, force_trace, '-', 
+        axs[1].plot(np.arange(force_trace.shape[0])/test.fs, force_trace, '-', 
                  c='.7', label='Experiment')
     for i, model_force in enumerate(model_force_list):
         model_time = model_time_list[i]
-        axs.plot(model_time, model_force, '-k', label='Model')
-    handles, labels = axs.get_legend_handles_labels()
-    axs.legend(handles[3:5], labels[3:5], loc=4)
-    axs.set_xlabel('Time (s)')
-    axs.set_ylabel('Force (mN)')
-    axs.set_xlim(0, 5)
+        axs[1].plot(model_time, model_force, '-k', label='Model')
+    handles, labels = axs[1].get_legend_handles_labels()
+    axs[1].legend(handles[3:5], labels[3:5], loc=4)
+    axs[1].set_xlabel('Time (s)')
+    axs[1].set_ylabel('Force (mN)')
+    axs[1].set_xlim(0, 5)
     for i in range(2):
         time, force = model_time_list[i], model_force_list[i]
-        axs.text(2.5, np.interp(2.5, time, force) - (-1)**i * 10, 
+        axs[1].text(2.5, np.interp(2.5, time, force) - (-1)**i * 10, 
              r'${R^2}$ = %.3f' % r2_list[i],
              ha='center', va='center', size=8)
+    for axes_id, axes in enumerate(axs.ravel()):
+        axes.text(-.125, 1.05, chr(65+axes_id), transform=axes.transAxes,
+            fontsize=12, fontweight='bold', va='top')   
     fig.tight_layout()
-    fig.savefig('3.png')
+    fig.savefig('validation.png', dpi=300)
+    fig.savefig('validation.tif', dpi=300)
     # %% Plot the static force displ curves
     fig, axs = plt.subplots()
     static_displ_list = [displ[2500] for displ in displ_trace_list]
