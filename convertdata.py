@@ -222,13 +222,13 @@ if __name__ == '__main__':
         (force_trace_list[1]+force_trace_list[3])/2))
     print(r2_list)            
     # %% Plot result
-    fig, axs = plt.subplots(figsize=(3.27, 2))
+    fig, axs = plt.subplots(figsize=(3.27, 4))
     for force_trace in force_trace_list:
         axs.plot(np.arange(force_trace.shape[0])/test.fs, force_trace, '-', 
-                 c='.5', label='Experiment')
+                 c='.7', label='Experiment')
     for i, model_force in enumerate(model_force_list):
         model_time = model_time_list[i]
-        axs.plot(model_time, model_force, '-r', label='Model')
+        axs.plot(model_time, model_force, '-k', label='Model')
     handles, labels = axs.get_legend_handles_labels()
     axs.legend(handles[3:5], labels[3:5], loc=4)
     axs.set_xlabel('Time (s)')
