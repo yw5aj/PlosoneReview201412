@@ -20,31 +20,30 @@ class Test:
     def __init__(self, test_id, fs=1e3):
         # Defining basic properties
         self.test_id = test_id
+        self.block_id = 1
         self.fs = fs
         # Load all data
         self.force_trace_list, self.displ_trace_list, contact_displ_skin = \
-            self.load_data(1, duration=5.)
-        contact_displ_noskin = self.load_data(2, duration=1.)[2]
+            self.load_data(duration=5.)
+        # Hack to get skin_thickness
+        self.block_id = 2
+        contact_displ_noskin = self.load_data(duration=1.)[2]
+        self.block_id = 1
         self.skin_thickness = contact_displ_noskin - contact_displ_skin
         return
 
-    def load_formula(self, from_file=False):
-        if from_file:
-            with open(
-                './YoshiExperiment/VirginiaIndenterLog_2014-12-22_0%d.txt'\
-                % self.test_id, 'r') as f:
-                log = f.read()
-            force_formula = re.findall('Function:\s+\S+', log)[0][9:].replace(
-                ' ', '')
-        else:
-            force_formula = '7.5079*x-0.389478308184'
+    def load_formula(self, force_formula='7.5079*x-0.389478308184'):
         displ_formula = '(x-1.)*10./4.'
         return force_formula, displ_formula
 
-    def load_data(self, block_id, duration):
+    def get_mat_fname(self):
+        fname = './YoshiExperiment/2014-12-22-0%d0%d.mat' %\
+            (self.test_id, self.block_id)
+        return fname
+    
+    def load_data(self, duration):
         force_formula, displ_formula = self.load_formula()
-        data = loadmat('./YoshiExperiment/2014-12-22-0%d0%d.mat' %
-            (self.test_id, block_id))
+        data = loadmat(self.get_mat_fname())
         # Check consistency of sampling rate
         assert np.diff(data['samplerate'].ravel()).ravel().nonzero()[0].size\
             == 0, 'Sampling rate not consistent between channels'
