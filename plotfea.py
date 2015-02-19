@@ -109,6 +109,7 @@ def extract_visco_stretch(friction_list, stretch_list, fmt_list):
             fontsize=12, fontweight='bold', va='top')    
     fig.tight_layout()
     fig.savefig('./extract_visco_stretch.png', dpi=300)
+    fig.savefig('./extract_visco_stretch.tif', dpi=300)
     return fig, axs
 
 
@@ -154,6 +155,7 @@ def extract_visco_thickness(friction_list, thickness_list, fmt_list):
             fontsize=12, fontweight='bold', va='top')    
     fig.tight_layout()
     fig.savefig('./extract_visco_thickness.png', dpi=300)
+    fig.savefig('./extract_visco_thickness.tif', dpi=300)
     return fig, axs
 
 

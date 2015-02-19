@@ -196,7 +196,7 @@ if __name__ == '__main__':
         os.system('call \"C:/SIMULIA/Abaqus/Commands/abaqus.bat\" cae '+\
             'script=X:/WorkFolder/AbaqusFolder/Viscoelasticity/'+\
             'runValidation.py')
-    # Read output data from abaqus
+    # %% Read output data from abaqus
     model_time_list, model_force_list, model_displ_list = [], [], []
     for fname in os.listdir(csv_folder):
         if fname.startswith('validation') and int(fname[10])<2:
@@ -222,26 +222,36 @@ if __name__ == '__main__':
         (force_trace_list[1]+force_trace_list[3])/2))
     print(r2_list)            
     # %% Plot result
-    fig, axs = plt.subplots(2, 1, figsize=(3.27, 5))
+    fig, axs = plt.subplots(3, 1, figsize=(3.27, 7.5))
     # Get schematic
     im = plt.imread('validation_schematic.png')
     axs[0].imshow(im)
-    axs[0].axis('off')    
+    axs[0].axis('off') 
+    # Get model
+    im = plt.imread('validation_fem.png')
+    axs[1].imshow(im)
+    axs[1].axis('off')
+    axs[1].axvline(x=5, ls='--', lw=1.5, c='k', dashes=(8, 3, 2, 3))
+    axs[1].text(-0.01, 0.5, 'Symmetric axis', va='center', ha='right',
+        rotation='vertical', transform=axs[1].transAxes, size=12)
+    axs[1].axhline(y=im.shape[0]-5, ls='-', lw=1.5, c='k')
+    axs[1].text(0.5, -0.01, 'Compression table', va='top', ha='center',
+        rotation='horizontal', transform=axs[1].transAxes, size=12)
     # Plot data trace
     for force_trace in force_trace_list:
-        axs[1].plot(np.arange(force_trace.shape[0])/test.fs, force_trace, '-', 
+        axs[2].plot(np.arange(force_trace.shape[0])/test.fs, force_trace, '-', 
                  c='.7', label='Experiment')
     for i, model_force in enumerate(model_force_list):
         model_time = model_time_list[i]
-        axs[1].plot(model_time, model_force, '-k', label='Model')
-    handles, labels = axs[1].get_legend_handles_labels()
-    axs[1].legend(handles[3:5], labels[3:5], loc=4)
-    axs[1].set_xlabel('Time (s)')
-    axs[1].set_ylabel('Force (mN)')
-    axs[1].set_xlim(0, 5)
+        axs[2].plot(model_time, model_force, '-k', label='Model')
+    handles, labels = axs[2].get_legend_handles_labels()
+    axs[2].legend(handles[3:5], labels[3:5], loc=4)
+    axs[2].set_xlabel('Time (s)')
+    axs[2].set_ylabel('Force (mN)')
+    axs[2].set_xlim(0, 5)
     for i in range(2):
         time, force = model_time_list[i], model_force_list[i]
-        axs[1].text(2.5, np.interp(2.5, time, force) - (-1)**i * 10, 
+        axs[2].text(2.5, np.interp(2.5, time, force) - (-1)**i * 10, 
              r'${R^2}$ = %.3f' % r2_list[i],
              ha='center', va='center', size=8)
     for axes_id, axes in enumerate(axs.ravel()):
@@ -250,6 +260,7 @@ if __name__ == '__main__':
     fig.tight_layout()
     fig.savefig('validation.png', dpi=300)
     fig.savefig('validation.tif', dpi=300)
+    plt.close(fig)
     # %% Plot the static force displ curves
     fig, axs = plt.subplots()
     static_displ_list = [displ[2500] for displ in displ_trace_list]
